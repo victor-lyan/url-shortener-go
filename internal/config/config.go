@@ -12,7 +12,7 @@ import (
 
 type Config struct {
 	BaseURL                 string `env:"base_url,default=http://localhost:8080"`
-	Host                    string `env:"host,default=0.0.0.0"`
+	Host                    string `env:"host,default=localhost"`
 	Port                    int    `env:"port,default=8080"`
 	TelegramContactUsername string `env:"telegram_contact_username,default=tomakado"`
 	DB                      DBConfig

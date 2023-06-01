@@ -1,9 +1,6 @@
 package server
 
 import (
-	"bytes"
-	"embed"
-	"html/template"
 	"log"
 	"net/http"
 
@@ -14,15 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-//go:embed static/*
-var static embed.FS
-
 func HandleTokenPage() echo.HandlerFunc {
-	tmpl, err := template.ParseFS(static, "static/token.html")
-	if err != nil {
-		log.Fatalf("error parsing token.html template: %v", err)
-	}
-
 	type templateData struct {
 		Token                   string
 		TelegramContactUsername string
@@ -31,7 +20,7 @@ func HandleTokenPage() echo.HandlerFunc {
 	}
 
 	type request struct {
-		Token          string `query:"token"`
+		Token string `query:"token"`
 	}
 
 	return func(c echo.Context) error {
@@ -66,25 +55,13 @@ func HandleTokenPage() echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusInternalServerError)
 		}
 
-		var (
-			buf  bytes.Buffer
-			data = templateData{
-				Token:                   req.Token,
-				TelegramContactUsername: config.Get().TelegramContactUsername,
-				GitHubUsername:          claims.User.GitHubLogin,
-				GitHubAvatarURL:         ghUser.GetAvatarURL(),
-			}
-		)
-
-		if err := tmpl.Execute(&buf, data); err != nil {
-			log.Printf("error executing token.html template: %v", err)
-			return echo.NewHTTPError(http.StatusInternalServerError)
+		data := templateData{
+			Token:                   req.Token,
+			TelegramContactUsername: config.Get().TelegramContactUsername,
+			GitHubUsername:          claims.User.GitHubLogin,
+			GitHubAvatarURL:         ghUser.GetAvatarURL(),
 		}
 
-		return c.HTML(http.StatusOK, buf.String())
+		return c.Render(http.StatusOK, "token", data)
 	}
-}
-
-func HandleStatic() echo.HandlerFunc {
-	return echo.WrapHandler(http.FileServer(http.FS(static)))
 }

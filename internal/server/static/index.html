@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.7/tailwind.min.css">
+    <style>
+        @keyframes slide-down {
+            0% {
+                transform: translateY(-20%);
+                opacity: 0;
+            }
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="flex flex-col items-center justify-center h-screen">
+    <form id="shortenUrlForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-1/2">
+        <div class="mb-4 flex">
+            <label class="block text-gray-700 font-bold mb-2 mr-2 hidden" for="url">
+                URL
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 
+                leading-tight focus:outline-none focus:shadow-outline" id="url" type="text" 
+                   name="url" placeholder="Enter your URL" required>
+            <button type="submit" id="submitBtn" class="inline-flex items-center px-4 py-2 font-semibold 
+                leading-6 text-sm shadow rounded-md text-white bg-indigo-500 ml-2">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Shorten
+            </button>
+        </div>
+        <div id="resultBlock" class="hidden border-l-4 border-green-500 bg-green-100 text-green-700 p-4 w-full mt-5">
+            <p class="font-bold">Your shortened URL:</p>
+            <p id="resultData" class="py-1"></p>
+            <button id="copyUrlButton" data-tooltip-target="spinner-card-example-copy-clipboard-tooltip" 
+                    data-tooltip-placement="bottom" type="button" data-copy-state="copy" 
+                    class="flex items-center px-3 py-2 text-xs font-medium text-blue-500 bg-blue-100 
+                    dark:text-blue-400 dark:bg-blue-800 
+                    hover:text-blue-800 dark:hover:text-white copy-to-clipboard-button">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" 
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <span class="copy-text">Copy</span>
+            </button>
+        </div>
+        <div id="errorBlock" class="hidden border-l-4 border-red-500 bg-red-100 text-red-700 p-4 w-full mt-5">
+            <p class="font-bold">There is something wrong:</p>
+            <p id="errorData"></p>
+        </div>
+    </form>
+</div>
+
+<script>
+    const form = document.querySelector('#shortenUrlForm');
+    const urlInput = document.querySelector('#url');
+    const submitBtn = document.querySelector('#submitBtn');
+    const resultBlock = document.querySelector('#resultBlock');
+    const resultData = document.querySelector('#resultData');
+    const errorBlock = document.querySelector('#errorBlock');
+    const errorData = document.querySelector('#errorData');
+    const copyUrlButton = document.querySelector('#copyUrlButton');
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        btnStartLoading()
+        const inputData = urlInput.value.trim();
+        if (inputData === '') {
+            btnFinishLoading();
+            showResultError("Please enter a URL")
+            return;
+        }
+        
+        fetch('/api/shorten', {
+            method: 'POST',
+            body: JSON.stringify({url: inputData}),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then((response) => {
+            if (!response.ok) {
+                return response.json().then(function(data) {
+                    console.log("throwing error with data " + data.message)
+                    throw new Error(data.message);
+                });
+            }
+            return response.json()
+        }).then((data) => {
+            showResultSuccess(data.shortUrl);
+        }).catch((error) => {
+            console.log("error received " + error.message);
+            showResultError(error.message);
+        });
+
+        btnFinishLoading();
+    });
+    
+    copyUrlButton.addEventListener('click', () => {
+        const range = document.createRange();
+        range.selectNode(resultData);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+
+        // Copy the selected text to the clipboard
+        document.execCommand("copy");
+
+        // Deselect the text
+        window.getSelection().removeAllRanges();
+
+        // Change the button text to "Copied" for 3 seconds
+        copyUrlButton.querySelector('.copy-text').textContent = "Copied";
+        setTimeout(function() {
+            copyUrlButton.querySelector('.copy-text').textContent = "Copy";
+        }, 3000);
+    });
+    
+    function showResultSuccess(data) {
+        hideResult();
+        resultData.textContent = data;
+        resultBlock.classList.remove('hidden');
+        resultBlock.classList.add('slide-down');
+    }
+
+    function showResultError(data) {
+        hideResult();
+        errorData.textContent = data;
+        errorBlock.classList.remove('hidden');
+        errorBlock.classList.add('slide-down');
+    }
+    
+    function hideResult() {
+        resultBlock.classList.remove('slide-down');
+        resultBlock.classList.add('hidden');
+        errorBlock.classList.remove('slide-down');
+        errorBlock.classList.add('hidden');
+    }
+    
+    function btnStartLoading() {
+        submitBtn.setAttribute('disabled', 'disabled');
+        submitBtn.classList.add('cursor-not-allowed');
+        submitBtn.classList.add('bg-indigo-400');
+        submitBtn.classList.remove('bg-indigo-500');
+        submitBtn.querySelector('svg').classList.remove('hidden');
+    }
+    
+    function btnFinishLoading() {
+        submitBtn.removeAttribute('disabled');
+        submitBtn.classList.remove('cursor-not-allowed');
+        submitBtn.classList.add('bg-indigo-500');
+        submitBtn.classList.remove('bg-indigo-400');
+        submitBtn.querySelector('svg').classList.add('hidden');
+    }
+</script>
+</body>
+</html>

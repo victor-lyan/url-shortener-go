@@ -39,21 +39,25 @@ func (s *Server) setupRouter() {
 	s.e = echo.New()
 	s.e.HideBanner = true
 	s.e.Validator = NewValidator()
+	s.e.Renderer = NewRenderer()
 
 	s.e.Pre(middleware.RemoveTrailingSlash())
 	s.e.Use(middleware.RequestID())
 
 	s.e.GET("/auth/oauth/github/link", HandleGetGitHubAuthLink(s.auth))
 	s.e.GET("/auth/oauth/github/callback", HandleGitHubAuthCallback(s.auth))
-	s.e.GET("/auth/token.html", HandleTokenPage())
-	s.e.GET("/static/*", HandleStatic())
+	s.e.GET("/auth/token", HandleTokenPage())
+	s.e.GET("/", HandleIndexPage)
 
-	restricted := s.e.Group("/api")
+	/*restricted := s.e.Group("/api")
 	{
 		restricted.Use(middleware.JWTWithConfig(makeJWTConfig()))
 		restricted.POST("/shorten", HandleShorten(s.shortener))
 		restricted.GET("/stats/:identifier", HandleStats(s.shortener))
-	}
+	}*/
+
+	s.e.POST("/api/shorten", HandleShorten(s.shortener))
+	s.e.GET("/api/stats/:identifier", HandleStats(s.shortener))
 
 	s.e.GET("/:identifier", HandleRedirect(s.shortener))
 
