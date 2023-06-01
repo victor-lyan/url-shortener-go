@@ -37,7 +37,12 @@ func HandleShorten(shortener shortener) echo.HandlerFunc {
 
 		if err := c.Validate(req); err != nil {
 			log.Printf("error validating a request %q: %v", req, err)
-			return echo.NewHTTPError(http.StatusBadRequest, model.ErrInvalidURL.Error())
+			httpError, ok := err.(*echo.HTTPError)
+			if ok {
+				httpError.Message = model.ErrInvalidURL.Error()
+				return httpError
+			}
+			return err
 		}
 
 		/*userToken, ok := c.Get("user").(*jwt.Token)
