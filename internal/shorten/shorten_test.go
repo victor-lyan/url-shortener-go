@@ -16,11 +16,11 @@ func TestShorten(t *testing.T) {
 
 		testCases := []testCase{
 			{
-				id:        1024,
+				id:       1024,
 				expected: "Mv",
 			},
 			{
-				id: 0,
+				id:       0,
 				expected: "",
 			},
 		}

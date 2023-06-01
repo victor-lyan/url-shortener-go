@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
 	"os"
@@ -21,11 +22,22 @@ import (
 )
 
 func main() {
+	if os.Getenv("APP_ENV") != "prod" {
+		err := godotenv.Load()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer dbCancel()
 
 	mgoClient, err := db.Connect(dbCtx, config.Get().DB.DSN)
 	if err != nil {
+		log.Fatal(err)
+	}
+	// without this, the app starts successfully even without mongodb connection
+	if err = mgoClient.Client().Ping(dbCtx, nil); err != nil {
 		log.Fatal(err)
 	}
 

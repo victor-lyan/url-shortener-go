@@ -10,7 +10,6 @@ import (
 	"github.com/defer-panic/url-shortener-api/internal/config"
 	"github.com/defer-panic/url-shortener-api/internal/model"
 	"github.com/defer-panic/url-shortener-api/internal/shorten"
-	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	. "github.com/samber/mo"
 )
@@ -25,7 +24,7 @@ type shortenRequest struct {
 }
 
 type shortenResponse struct {
-	ShortURL string `json:"short_url,omitempty"`
+	ShortURL string `json:"shortUrl,omitempty"`
 	Message  string `json:"message,omitempty"`
 }
 
@@ -37,10 +36,16 @@ func HandleShorten(shortener shortener) echo.HandlerFunc {
 		}
 
 		if err := c.Validate(req); err != nil {
+			log.Printf("error validating a request %q: %v", req, err)
+			httpError, ok := err.(*echo.HTTPError)
+			if ok {
+				httpError.Message = model.ErrInvalidURL.Error()
+				return httpError
+			}
 			return err
 		}
 
-		userToken, ok := c.Get("user").(*jwt.Token)
+		/*userToken, ok := c.Get("user").(*jwt.Token)
 		if !ok {
 			log.Println("error: user is not presented in context")
 			return echo.NewHTTPError(http.StatusInternalServerError)
@@ -49,7 +54,7 @@ func HandleShorten(shortener shortener) echo.HandlerFunc {
 		if !ok {
 			log.Println("error: failed to get user claims from token")
 			return echo.NewHTTPError(http.StatusInternalServerError)
-		}
+		}*/
 
 		identifier := None[string]()
 		if strings.TrimSpace(req.Identifier) != "" {
@@ -59,7 +64,8 @@ func HandleShorten(shortener shortener) echo.HandlerFunc {
 		input := model.ShortenInput{
 			RawURL:     req.URL,
 			Identifier: identifier,
-			CreatedBy:  userClaims.User.GitHubLogin,
+			//CreatedBy:  userClaims.User.GitHubLogin,
+			CreatedBy: "user",
 		}
 
 		shortening, err := shortener.Shorten(c.Request().Context(), input)

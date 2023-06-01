@@ -5,8 +5,6 @@ import (
 	"net/http"
 
 	"github.com/defer-panic/url-shortener-api/internal/auth"
-	"github.com/defer-panic/url-shortener-api/internal/config"
-	"github.com/defer-panic/url-shortener-api/internal/model"
 	"github.com/defer-panic/url-shortener-api/internal/shorten"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -39,21 +37,25 @@ func (s *Server) setupRouter() {
 	s.e = echo.New()
 	s.e.HideBanner = true
 	s.e.Validator = NewValidator()
+	s.e.Renderer = NewRenderer()
 
 	s.e.Pre(middleware.RemoveTrailingSlash())
 	s.e.Use(middleware.RequestID())
 
 	s.e.GET("/auth/oauth/github/link", HandleGetGitHubAuthLink(s.auth))
 	s.e.GET("/auth/oauth/github/callback", HandleGitHubAuthCallback(s.auth))
-	s.e.GET("/auth/token.html", HandleTokenPage())
-	s.e.GET("/static/*", HandleStatic())
+	s.e.GET("/auth/token", HandleTokenPage())
+	s.e.GET("/", HandleIndexPage)
 
-	restricted := s.e.Group("/api")
+	/*restricted := s.e.Group("/api")
 	{
 		restricted.Use(middleware.JWTWithConfig(makeJWTConfig()))
 		restricted.POST("/shorten", HandleShorten(s.shortener))
 		restricted.GET("/stats/:identifier", HandleStats(s.shortener))
-	}
+	}*/
+
+	s.e.POST("/api/shorten", HandleShorten(s.shortener))
+	s.e.GET("/api/stats/:identifier", HandleStats(s.shortener))
 
 	s.e.GET("/:identifier", HandleRedirect(s.shortener))
 
@@ -74,7 +76,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func makeJWTConfig() middleware.JWTConfig {
+/*func makeJWTConfig() middleware.JWTConfig {
 	return middleware.JWTConfig{
 		SigningKey: []byte(config.Get().Auth.JWTSecretKey),
 		Claims:     &model.UserClaims{},
@@ -82,4 +84,4 @@ func makeJWTConfig() middleware.JWTConfig {
 			return echo.NewHTTPError(http.StatusUnauthorized)
 		},
 	}
-}
+}*/

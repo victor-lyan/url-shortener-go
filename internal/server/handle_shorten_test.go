@@ -40,7 +40,7 @@ func TestHandleShorten(t *testing.T) {
 		assert.Equal(t, http.StatusOK, recorder.Code)
 
 		var resp struct {
-			ShortURL string `json:"short_url"`
+			ShortURL string `json:"shortUrl"`
 		}
 
 		require.NoError(t, json.NewDecoder(recorder.Body).Decode(&resp), &resp)
@@ -67,7 +67,7 @@ func TestHandleShorten(t *testing.T) {
 		var httpErr *echo.HTTPError
 		require.ErrorAs(t, handler(c), &httpErr)
 		assert.Equal(t, http.StatusBadRequest, httpErr.Code)
-		assert.Contains(t, httpErr.Message, "Field validation for 'URL' failed")
+		assert.Contains(t, httpErr.Message, "invalid url")
 	})
 
 	t.Run("returns error if identifier is already taken", func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestHandleShorten(t *testing.T) {
 		var httpErr *echo.HTTPError
 		require.ErrorAs(t, handler(c), &httpErr)
 		assert.Equal(t, http.StatusConflict, httpErr.Code)
-		assert.Contains(t, httpErr.Message, model.ErrIdentifierExists.Error())
+		assert.Equal(t, httpErr.Message, model.ErrIdentifierExists.Error())
 	})
 }
 

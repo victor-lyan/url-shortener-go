@@ -33,6 +33,7 @@ go.work
 /.dbschema/
 .env
 /bin/
+.idea/
 
 /tests/*.cov
 /tests/*.cov_tmp

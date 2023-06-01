@@ -9,6 +9,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/google/go-github/v48 v48.0.0
 	github.com/google/uuid v1.3.0
+	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.9.1
 	github.com/samber/mo v1.5.1
 	github.com/sethvargo/go-envconfig v0.8.2

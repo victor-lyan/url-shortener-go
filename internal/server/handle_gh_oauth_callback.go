@@ -29,7 +29,7 @@ func HandleGitHubAuthCallback(cbProvider callbackProvider) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusInternalServerError)
 		}
 
-		redirectURL := fmt.Sprintf("%s/auth/token.html?token=%s", config.Get().BaseURL, jwt)
+		redirectURL := fmt.Sprintf("%s/auth/token?token=%s", config.Get().BaseURL, jwt)
 		return c.Redirect(http.StatusMovedPermanently, redirectURL)
 	}
 }
