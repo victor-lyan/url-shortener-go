@@ -12,7 +12,7 @@ import (
 
 type Config struct {
 	BaseURL                 string `env:"base_url,default=http://localhost:8080"`
-	Host                    string `env:"host,default=localhost"`
+	Host                    string `env:"host,default=0.0.0.0"`
 	Port                    int    `env:"port,default=8080"`
 	TelegramContactUsername string `env:"telegram_contact_username,default=tomakado"`
 	DB                      DBConfig
@@ -27,6 +27,8 @@ func (c Config) ListenAddr() string {
 type DBConfig struct {
 	DSN      string `env:"mongodb_dsn"`
 	Database string `env:"mongodb_database"`
+	User     string `env:"mongodb_user"`
+	Password string `env:"mongodb_password"`
 }
 
 type GitHubConfig struct {

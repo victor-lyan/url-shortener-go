@@ -22,7 +22,7 @@ import (
 )
 
 func main() {
-	if os.Getenv("APP_ENV") != "prod" {
+	if os.Getenv("APP_ENV") == "local" {
 		err := godotenv.Load()
 		if err != nil {
 			log.Fatal(err)
@@ -32,7 +32,7 @@ func main() {
 	dbCtx, dbCancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer dbCancel()
 
-	mgoClient, err := db.Connect(dbCtx, config.Get().DB.DSN)
+	mgoClient, err := db.Connect(dbCtx, config.Get().DB)
 	if err != nil {
 		log.Fatal(err)
 	}

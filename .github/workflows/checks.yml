@@ -3,58 +3,101 @@ name: checks
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "deploy" ]
   pull_request:
     branches: [ "master" ]
+
+env:
+  REGISTRY: "registry.digitalocean.com/url-shortener"
+  IMAGE_NAME: "url-shortener-service"
+  DOCKER_NETWORK: "url-shortener-network"
+  MONGODB_DSN: "mongodb://url-shortener-mongo:27017"
+  MONGODB_DATABASE: "url-shortener-db"
+  MONGODB_USER: "mongoUser"
 
 jobs:
 
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout the repo
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
-        
-    - name: lint
-      run: make lint
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: lint
+        run: make lint
   
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout the repo
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
-      
-    - name: test
-      run: make TESTS_WD=$GITHUB_WORKSPACE test
-    
-    - name: install goveralls
-      run: GO111MODULE=off go get -u github.com/mattn/goveralls
-      
-    - name: submit coverage
-      run: $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov
-      env:
-        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-  build:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: test
+        run: make TESTS_WD=$GITHUB_WORKSPACE test
+
+      - name: install goveralls
+        run: GO111MODULE=off go get -u github.com/mattn/goveralls
+
+      - name: submit coverage
+        run: $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  build-and-push:
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [ lint, test ]
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout the repo
+        uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
+      - name: Build container image
+        run: docker build -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest .
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Log in to DigitalOcean Container Registry with short-lived credentials
+        run: doctl registry login --expiry-seconds 600
       
-    - name: Test
-      run: make build
+      #      - name: Remove all old images
+      #        run: if [ ! -z "$(doctl registry repository list | grep "$(echo $IMAGE_NAME)")" ]; then doctl registry repository delete-manifest $(echo $IMAGE_NAME) $(doctl registry repository list-tags $(echo $IMAGE_NAME) | grep -o "sha.*") --force; else echo "No repository"; fi
 
-    
+      - name: Push image to DigitalOcean Container Registry
+        run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
+  
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Deploy to Digital Ocean droplet via SSH action
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSHKEY }}
+          envs: IMAGE_NAME,REGISTRY,DOCKER_NETWORK,MONGODB_DSN,MONGODB_USER,MONGODB_DATABASE,{{ secrets.DIGITALOCEAN_ACCESS_TOKEN }},{{ secrets.MONGODB_PASSWORD }}
+          script: |
+            # Login to registry
+            docker login -u ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} -p ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} registry.digitalocean.com
+            # Stop running container
+            docker stop $(echo $IMAGE_NAME)
+            # Remove old container
+            docker rm $(echo $IMAGE_NAME)
+            # Run a new container from a new image
+            docker run -d \
+            --network $(echo $DOCKER_NETWORK) -e MONGODB_DSN=$(echo $MONGODB_DSN) \
+            -e MONGODB_USER=$(echo $MONGODB_USER) -e MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }} \
+            -e MONGODB_DATABASE=$(echo $MONGODB_DATABASE) \
+            --name $(echo $IMAGE_NAME) $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest    
