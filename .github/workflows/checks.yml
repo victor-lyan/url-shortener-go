@@ -96,7 +96,7 @@ jobs:
             # Remove old container
             docker rm $(echo $IMAGE_NAME)
             # Run a new container from a new image
-            docker run -d \
+            docker run -d -p 8080:8080 \
             --network $(echo $DOCKER_NETWORK) -e MONGODB_DSN=$(echo $MONGODB_DSN) \
             -e MONGODB_USER=$(echo $MONGODB_USER) -e MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }} \
             -e MONGODB_DATABASE=$(echo $MONGODB_DATABASE) \
