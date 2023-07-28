@@ -99,5 +99,5 @@ jobs:
             docker run -d -p 8080:8080 \
             --network $(echo $DOCKER_NETWORK) -e MONGODB_DSN=$(echo $MONGODB_DSN) \
             -e MONGODB_USER=$(echo $MONGODB_USER) -e MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }} \
-            -e MONGODB_DATABASE=$(echo $MONGODB_DATABASE) \
+            -e MONGODB_DATABASE=$(echo $MONGODB_DATABASE) -e BASE_URL=http://${{ secrets.HOST }}:8080 \
             --name $(echo $IMAGE_NAME) $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest    
