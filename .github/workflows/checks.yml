@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build container image
-        run: docker build -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest .
+        run: docker build -t $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7) .
 
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
@@ -74,7 +74,7 @@ jobs:
       #        run: if [ ! -z "$(doctl registry repository list | grep "$(echo $IMAGE_NAME)")" ]; then doctl registry repository delete-manifest $(echo $IMAGE_NAME) $(doctl registry repository list-tags $(echo $IMAGE_NAME) | grep -o "sha.*") --force; else echo "No repository"; fi
 
       - name: Push image to DigitalOcean Container Registry
-        run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest
+        run: docker push $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)
   
   deploy:
     runs-on: ubuntu-latest
@@ -86,7 +86,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSHKEY }}
-          envs: IMAGE_NAME,REGISTRY,DOCKER_NETWORK,MONGODB_DSN,MONGODB_USER,MONGODB_DATABASE,{{ secrets.DIGITALOCEAN_ACCESS_TOKEN }},{{ secrets.MONGODB_PASSWORD }}
+          envs: IMAGE_NAME,REGISTRY,GITHUB_SHA,DOCKER_NETWORK,MONGODB_DSN,MONGODB_USER,MONGODB_DATABASE,{{ secrets.DIGITALOCEAN_ACCESS_TOKEN }},{{ secrets.MONGODB_PASSWORD }}
           script: |
             # Login to registry
             docker login -u ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} -p ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }} registry.digitalocean.com
@@ -99,4 +99,4 @@ jobs:
             --network $(echo $DOCKER_NETWORK) -e MONGODB_DSN=$(echo $MONGODB_DSN) \
             -e MONGODB_USER=$(echo $MONGODB_USER) -e MONGODB_PASSWORD=${{ secrets.MONGODB_PASSWORD }} \
             -e MONGODB_DATABASE=$(echo $MONGODB_DATABASE) -e BASE_URL=http://${{ secrets.HOST }}:8080 \
-            --name $(echo $IMAGE_NAME) $(echo $REGISTRY)/$(echo $IMAGE_NAME):latest    
+            --name $(echo $IMAGE_NAME) $(echo $REGISTRY)/$(echo $IMAGE_NAME):$(echo $GITHUB_SHA | head -c7)    
