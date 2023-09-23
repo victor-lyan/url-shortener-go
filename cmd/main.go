@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 	"net/http"
@@ -22,6 +23,7 @@ import (
 )
 
 func main() {
+	fmt.Println("Hello world")
 	if os.Getenv("APP_ENV") == "local" {
 		err := godotenv.Load()
 		if err != nil {
