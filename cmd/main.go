@@ -22,7 +22,7 @@ import (
 )
 
 func main() {
-	log.Println("Hello world")
+	log.Println("Hello world1")
 	if os.Getenv("APP_ENV") == "local" {
 		err := godotenv.Load()
 		if err != nil {
